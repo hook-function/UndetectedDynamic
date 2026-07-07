@@ -43,20 +43,25 @@ local c = {
 	sl = Color3.fromRGB(40, 40, 48),
 }
 
-local Lib = {Toggled = false, Windows = {}, Conns = {}, _cfg = {data = {}, auto = false}, _reg = {}}
-
-local idCounter = 0
-local function regId()
-	idCounter = idCounter + 1
-	return idCounter
-end
+local Lib = {
+	Toggled = false, Windows = {}, Conns = {}, Opts = {},
+	_cfg = {folder = "UndetectedConfigs", name = "", data = {}, auto = false},
+}
 
 function Lib:SetTheme(overrides)
 	for k, v in pairs(overrides or {}) do
-		if c[k] ~= nil then
-			c[k] = v
-		end
+		if c[k] ~= nil then c[k] = v end
 	end
+end
+
+-- ── Config System ──
+
+local function cfgPath(name)
+	local dir = Lib._cfg.folder .. "/settings"
+	if not isfolder(dir) then
+		makefolder(dir)
+	end
+	return dir .. "/" .. name .. ".json"
 end
 
 function Lib:CreateConfig(name)
@@ -64,41 +69,92 @@ function Lib:CreateConfig(name)
 	self._cfg.data = {}
 end
 
-function Lib:SaveConfig()
-	for _, item in ipairs(self._reg) do
-		self._cfg.data[item.id] = item.get()
+function Lib:SaveConfig(name)
+	name = name or self._cfg.name
+	if not name or name == "" then return false end
+	local out = {}
+	for idx, obj in pairs(self.Opts) do
+		out[idx] = obj:GetValue()
 	end
-	return self._cfg.data
+	local ok, json = pcall(Http.JSONEncode, Http, out)
+	if not ok then return false end
+	writefile(cfgPath(name), json)
+	if name ~= self._cfg.name then
+		self._cfg.name = name
+	end
+	return true
 end
 
-function Lib:LoadConfig()
-	for _, item in ipairs(self._reg) do
-		if self._cfg.data[item.id] ~= nil then
-			item.set(self._cfg.data[item.id])
+function Lib:LoadConfig(name)
+	name = name or self._cfg.name
+	if not name or name == "" then return false end
+	if not isfile(cfgPath(name)) then return false end
+	local ok, data = pcall(Http.JSONDecode, Http, readfile(cfgPath(name)))
+	if not ok or type(data) ~= "table" then return false end
+	self._cfg.data = data
+	for idx, obj in pairs(self.Opts) do
+		if data[idx] ~= nil then
+			obj:SetValue(data[idx])
 		end
 	end
+	if name ~= self._cfg.name then
+		self._cfg.name = name
+	end
+	return true
 end
 
 function Lib:AutoLoadConfig(bool)
 	self._cfg.auto = bool
 end
 
-function Lib:ExportConfig()
-	self:SaveConfig()
-	return Http:JSONEncode(self._cfg.data)
+function Lib:DeleteConfig(name)
+	name = name or self._cfg.name
+	if not name or name == "" then return false end
+	if isfile(cfgPath(name)) then
+		delfile(cfgPath(name))
+		return true
+	end
+	return false
+end
+
+function Lib:ListConfigs()
+	local dir = Lib._cfg.folder .. "/settings"
+	if not isfolder(dir) then return {} end
+	local files = listfiles(dir)
+	local out = {}
+	for _, f in ipairs(files) do
+		local name = f:match("([^/\\]+)%.json$")
+		if name then table.insert(out, name) end
+	end
+	return out
+end
+
+function Lib:ExportConfig(name)
+	self:SaveConfig(name)
+	local path = cfgPath(name or self._cfg.name)
+	if isfile(path) then
+		return readfile(path)
+	end
+	return nil
 end
 
 function Lib:ImportConfig(json)
 	local ok, data = pcall(Http.JSONDecode, Http, json)
-	if ok and type(data) == "table" then
-		self._cfg.data = data
-		self:LoadConfig()
+	if not ok or type(data) ~= "table" then return false end
+	self._cfg.data = data
+	for idx, obj in pairs(self.Opts) do
+		if data[idx] ~= nil then
+			obj:SetValue(data[idx])
+		end
 	end
+	return true
 end
 
--- register stateful elements for config
-local function reg(id, set, get)
-	table.insert(Lib._reg, {id = id, set = set, get = get})
+-- register stateful elements by string id
+local function regObj(id, obj)
+	if id and id ~= "" then
+		Lib.Opts[id] = obj
+	end
 end
 
 local function setIcon(img, name)
@@ -215,7 +271,7 @@ local function mkToggle(parent, text, opts)
 	set(def)
 
 	local obj = {SetValue = set, GetValue = function() return state end}
-	reg("Toggle_" .. text .. "_" .. regId(), set, function() return state end)
+	regObj(opts.Id or opts.id or text, obj)
 	return obj
 end
 
@@ -270,7 +326,7 @@ local function mkInput(parent, text, opts)
 	end)
 
 	local obj = {TextBox = box, SetValue = function(v) box.Text = tostring(v) end, GetValue = function() return box.Text end}
-	reg("Input_" .. text .. "_" .. regId(), obj.SetValue, obj.GetValue)
+	regObj(opts.Id or opts.id or text, obj)
 	return obj
 end
 
@@ -385,7 +441,7 @@ local function mkSlider(parent, text, opts)
 
 	update(def)
 	local obj = {SetValue = function(v) update(v) end, GetValue = function() return val end}
-	reg("Slider_" .. text .. "_" .. regId(), obj.SetValue, obj.GetValue)
+	regObj(opts.Id or opts.id or text, obj)
 	return obj
 end
 
@@ -514,7 +570,7 @@ local function mkDropdown(parent, text, opts)
 	end)
 
 	local obj = {SetValue = function(v) sel = v; disp.Text = v; pcall(cb, v) end, GetValue = function() return sel end}
-	reg("Dropdown_" .. text .. "_" .. regId(), obj.SetValue, obj.GetValue)
+	regObj(opts.Id or opts.id or text, obj)
 	return obj
 end
 
@@ -675,7 +731,7 @@ local function mkColorPicker(parent, text, opts)
 	end)
 
 	local obj = {SetValue = function(cl) col = cl; sw.BackgroundColor3 = cl; pcall(cb, cl) end, GetValue = function() return col end}
-	reg("Color_" .. text .. "_" .. regId(), obj.SetValue, obj.GetValue)
+	regObj(opts.Id or opts.id or text, obj)
 	return obj
 end
 
@@ -745,9 +801,11 @@ local function makeCategory(tab, name)
 	}
 
 	lst:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-		cont.Size = UDim2.new(1, 0, 0, lst.AbsoluteContentSize.Y)
-		local h = 34 + cont.Size.Y.Offset + 8
-		cat.Size = UDim2.new(1, 0, 0, h)
+		local ch = lst.AbsoluteContentSize.Y
+		cont.Size = UDim2.new(1, 0, 0, ch)
+		if con.Expanded then
+			cat.Size = UDim2.new(1, 0, 0, 34 + ch + 8)
+		end
 	end)
 
 	hdr.MouseButton1Click:Connect(function()
@@ -789,12 +847,24 @@ function tabMt:AddDivider()
 	return mkDivider(self.Content)
 end
 
-tabMt.AddButton = mkButton
-tabMt.AddToggle = mkToggle
-tabMt.AddInput = mkInput
-tabMt.AddSlider = mkSlider
-tabMt.AddDropdown = mkDropdown
-tabMt.AddColorPicker = mkColorPicker
+function tabMt:AddButton(text, cb)
+	return mkButton(self.Content, text, cb)
+end
+function tabMt:AddToggle(text, opts)
+	return mkToggle(self.Content, text, opts)
+end
+function tabMt:AddInput(text, opts)
+	return mkInput(self.Content, text, opts)
+end
+function tabMt:AddSlider(text, opts)
+	return mkSlider(self.Content, text, opts)
+end
+function tabMt:AddDropdown(text, opts)
+	return mkDropdown(self.Content, text, opts)
+end
+function tabMt:AddColorPicker(text, opts)
+	return mkColorPicker(self.Content, text, opts)
+end
 
 -- Window methods ----------------------------------------------------
 
@@ -886,7 +956,7 @@ function Lib:CreateWindow(opts)
 		local toggle = Instance.new("ImageButton")
 		toggle.Size = UDim2.new(0, 32, 0, 32)
 		toggle.Position = UDim2.new(0, 8, 0.5, -16)
-		toggle.BackgroundColor3 = c.bg
+		toggle.BackgroundColor3 = c.darker
 		toggle.BorderSizePixel = 0
 		toggle.Image = uic and uic.Url or ""
 		if uic then
@@ -936,7 +1006,8 @@ function Lib:CreateWindow(opts)
 		local mc = Instance.new("Frame")
 		mc.Size = UDim2.new(1, -181, 1, 0)
 		mc.Position = UDim2.new(0, 181, 0, 0)
-		mc.BackgroundTransparency = 1
+		mc.BackgroundColor3 = c.bg
+		mc.BorderSizePixel = 0
 		mc.Parent = ca
 		win.MainContent = mc
 
@@ -960,9 +1031,10 @@ function Lib:CreateWindow(opts)
 			bc.Parent = btn
 
 			local ic = Instance.new("ImageLabel")
-			ic.Size = UDim2.new(0, 20, 0, 20)
-			ic.Position = UDim2.new(0, 6, 0.5, -10)
-			ic.BackgroundTransparency = 1
+			ic.Size = UDim2.new(0, 24, 0, 24)
+			ic.Position = UDim2.new(0, 6, 0.5, -12)
+			ic.BackgroundColor3 = c.darker
+			ic.BorderSizePixel = 0
 			ic.Image = ia and ia.Url or ""
 			if ia then
 				ic.ImageRectSize = ia.ImageRectSize
@@ -971,6 +1043,13 @@ function Lib:CreateWindow(opts)
 			ic.ImageColor3 = c.txt
 			ic.ScaleType = Enum.ScaleType.Fit
 			ic.Parent = btn
+			local icC = Instance.new("UICorner")
+			icC.CornerRadius = UDim.new(0, 4)
+			icC.Parent = ic
+			local icS = Instance.new("UIStroke")
+			icS.Color = c.brd
+			icS.Thickness = 1
+			icS.Parent = ic
 
 			local lbl = Instance.new("TextLabel")
 			lbl.Size = UDim2.new(1, -40, 1, 0)
@@ -1003,6 +1082,13 @@ function Lib:CreateWindow(opts)
 			pp.Parent = page
 
 			tab.Content = page
+
+			-- reparent categories created before Build
+			for _, cat in ipairs(tab.Categories) do
+				if cat.Category and cat.Category.Parent ~= page then
+					cat.Category.Parent = page
+				end
+			end
 
 			btn.MouseEnter:Connect(function() tweenBg(btn, c.hover, 0) end)
 			btn.MouseLeave:Connect(function()
@@ -1128,7 +1214,7 @@ end
 function Lib:Unload()
 	for _, sig in ipairs(self.Conns) do sig:Disconnect() end
 	for _, w in ipairs(self.Windows) do w:Destroy() end
-	self.Conns = {}; self.Windows = {}; self._reg = {}
+	self.Conns = {}; self.Windows = {}; self.Opts = {}
 	getgenv().UndetectedDynamic = nil
 end
 
