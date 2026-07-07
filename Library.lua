@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local Tween = game:GetService("TweenService")
 local Http = game:GetService("HttpService")
+local TextService = game:GetService("TextService")
 
 local GetIcon
 local ok, Lucide = pcall(function()
@@ -24,27 +25,28 @@ else
 	function GetIcon() end
 end
 
-local TInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-local function tweenBg(obj, color, trans)
-	Tween:Create(obj, TInfo, {BackgroundColor3 = color, BackgroundTransparency = trans}):Play()
+local TInfo = TweenInfo.new(0.25, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out)
+local function tween(obj, prop, value)
+	Tween:Create(obj, TInfo, {[prop] = value}):Play()
 end
 
+-- Premium UI Dark System Palette[cite: 1]
 local c = {
-	bg = Color3.fromRGB(30, 30, 35),
-	dark = Color3.fromRGB(22, 22, 26),
-	darker = Color3.fromRGB(18, 18, 22),
-	acc = Color3.fromRGB(88, 101, 242),
-	hover = Color3.fromRGB(50, 50, 58),
-	txt = Color3.fromRGB(220, 220, 225),
-	dim = Color3.fromRGB(140, 140, 150),
-	brd = Color3.fromRGB(40, 40, 48),
-	err = Color3.fromRGB(220, 60, 60),
-	inp = Color3.fromRGB(25, 25, 30),
-	sl = Color3.fromRGB(40, 40, 48),
+	bg = Color3.fromRGB(15, 15, 18),
+	dark = Color3.fromRGB(20, 20, 25),
+	darker = Color3.fromRGB(12, 12, 14),
+	acc = Color3.fromRGB(99, 102, 241), -- Radiant Indigo Accent[cite: 1]
+	hover = Color3.fromRGB(35, 35, 45),
+	txt = Color3.fromRGB(243, 244, 246),
+	dim = Color3.fromRGB(156, 163, 175),
+	brd = Color3.fromRGB(32, 32, 40),
+	err = Color3.fromRGB(239, 68, 68),
+	inp = Color3.fromRGB(24, 24, 30),
+	sl = Color3.fromRGB(38, 38, 48),
 }
 
 local Lib = {
-	Toggled = false, Windows = {}, Conns = {}, Opts = {},
+	Toggled = true, Windows = {}, Conns = {}, Opts = {},
 	_cfg = {folder = "UndetectedConfigs", name = "", data = {}, auto = false},
 }
 
@@ -54,7 +56,7 @@ function Lib:SetTheme(overrides)
 	end
 end
 
--- ── Config System ──
+-- ── Config System ──[cite: 1]
 
 local function cfgPath(name)
 	local dir = Lib._cfg.folder .. "/settings"
@@ -107,6 +109,7 @@ function Lib:AutoLoadConfig(bool)
 	self._cfg.auto = bool
 end
 
+-- Full configuration utility management pipeline[cite: 1]
 function Lib:DeleteConfig(name)
 	name = name or self._cfg.name
 	if not name or name == "" then return false end
@@ -150,7 +153,6 @@ function Lib:ImportConfig(json)
 	return true
 end
 
--- register stateful elements by string id
 local function regObj(id, obj)
 	if id and id ~= "" then
 		Lib.Opts[id] = obj
@@ -166,16 +168,33 @@ local function setIcon(img, name)
 	end
 end
 
--- Element builders -------------------------------------------------
+-- Premium Helper UI Builders
+local function addStroke(parent, color, thickness)
+	local str = Instance.new("UIStroke")
+	str.Color = color or c.brd
+	str.Thickness = thickness or 1
+	str.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	str.Parent = parent
+	return str
+end
+
+local function addCorner(parent, radius)
+	local cor = Instance.new("UICorner")
+	cor.CornerRadius = UDim.new(0, radius or 6)
+	cor.Parent = parent
+	return cor
+end
+
+-- Element builders -------------------------------------------------[cite: 1]
 
 local function mkLabel(parent, text)
 	local l = Instance.new("TextLabel")
-	l.Size = UDim2.new(1, 0, 0, 20)
+	l.Size = UDim2.new(1, 0, 0, 24)
 	l.BackgroundTransparency = 1
 	l.Text = text
 	l.TextColor3 = c.dim
 	l.Font = Enum.Font.Gotham
-	l.TextSize = 12
+	l.TextSize = 13
 	l.TextXAlignment = Enum.TextXAlignment.Left
 	l.Parent = parent
 	return l
@@ -192,7 +211,7 @@ end
 
 local function mkButton(parent, text, cb)
 	local b = Instance.new("TextButton")
-	b.Size = UDim2.new(1, 0, 0, 32)
+	b.Size = UDim2.new(1, 0, 0, 34)
 	b.BackgroundColor3 = c.inp
 	b.BorderSizePixel = 0
 	b.Text = text
@@ -201,11 +220,17 @@ local function mkButton(parent, text, cb)
 	b.TextSize = 13
 	b.AutoButtonColor = false
 	b.Parent = parent
-	local co = Instance.new("UICorner")
-	co.CornerRadius = UDim.new(0, 4)
-	co.Parent = b
-	b.MouseEnter:Connect(function() tweenBg(b, c.hover, 0) end)
-	b.MouseLeave:Connect(function() tweenBg(b, c.inp, 0) end)
+	addCorner(b, 6)
+	addStroke(b, c.brd)
+
+	b.MouseEnter:Connect(function() 
+		tween(b, "BackgroundColor3", c.hover) 
+		b.TextColor3 = Color3.new(1, 1, 1)
+	end)
+	b.MouseLeave:Connect(function() 
+		tween(b, "BackgroundColor3", c.inp) 
+		b.TextColor3 = c.txt
+	end)
 	b.MouseButton1Click:Connect(function() if cb then cb() end end)
 	return b
 end
@@ -215,12 +240,12 @@ local function mkToggle(parent, text, opts)
 	local def = opts.Default or false
 	local cb = opts.Callback or function() end
 	local row = Instance.new("Frame")
-	row.Size = UDim2.new(1, 0, 0, 28)
+	row.Size = UDim2.new(1, 0, 0, 32)
 	row.BackgroundTransparency = 1
 	row.Parent = parent
 
 	local l = Instance.new("TextLabel")
-	l.Size = UDim2.new(1, -34, 1, 0)
+	l.Size = UDim2.new(1, -44, 1, 0)
 	l.BackgroundTransparency = 1
 	l.Text = text
 	l.TextColor3 = c.txt
@@ -230,31 +255,28 @@ local function mkToggle(parent, text, opts)
 	l.Parent = row
 
 	local bg = Instance.new("Frame")
-	bg.Size = UDim2.new(0, 28, 0, 16)
-	bg.Position = UDim2.new(1, -28, 0.5, -8)
+	bg.Size = UDim2.new(0, 34, 0, 18)
+	bg.Position = UDim2.new(1, -34, 0.5, -9)
 	bg.BackgroundColor3 = c.sl
 	bg.BorderSizePixel = 0
 	bg.Parent = row
-	local bgC = Instance.new("UICorner")
-	bgC.CornerRadius = UDim.new(0, 8)
-	bgC.Parent = bg
+	addCorner(bg, 9)
+	addStroke(bg, c.brd)
 
 	local knob = Instance.new("Frame")
 	knob.Size = UDim2.new(0, 12, 0, 12)
-	knob.Position = UDim2.new(0, 2, 0.5, -6)
+	knob.Position = UDim2.new(0, 3, 0.5, -6)
 	knob.BackgroundColor3 = c.dim
 	knob.BorderSizePixel = 0
 	knob.Parent = bg
-	local kc = Instance.new("UICorner")
-	kc.CornerRadius = UDim.new(0, 6)
-	kc.Parent = knob
+	addCorner(knob, 6)
 
 	local state = def
 	local function set(v)
 		state = v
 		local col = if state then c.acc else c.sl
-		local kcol = if state then c.txt else c.dim
-		local kp = if state then UDim2.new(1, -14, 0.5, -6) else UDim2.new(0, 2, 0.5, -6)
+		local kcol = if state then Color3.new(1, 1, 1) else c.dim
+		local kp = if state then UDim2.new(1, -15, 0.5, -6) else UDim2.new(0, 3, 0.5, -6)
 		Tween:Create(bg, TInfo, {BackgroundColor3 = col}):Play()
 		Tween:Create(knob, TInfo, {BackgroundColor3 = kcol, Position = kp}):Play()
 		pcall(cb, state)
@@ -278,17 +300,17 @@ end
 local function mkInput(parent, text, opts)
 	opts = opts or {}
 	local def = opts.Default or ""
-	local ph = opts.Placeholder or ""
+	local ph = opts.Placeholder or "Type here..."
 	local cb = opts.Callback or function() end
 	local num = opts.Numeric or false
 
 	local row = Instance.new("Frame")
-	row.Size = UDim2.new(1, 0, 0, 28)
+	row.Size = UDim2.new(1, 0, 0, 32)
 	row.BackgroundTransparency = 1
 	row.Parent = parent
 
 	local l = Instance.new("TextLabel")
-	l.Size = UDim2.new(0, 80, 1, 0)
+	l.Size = UDim2.new(0, 100, 1, 0)
 	l.BackgroundTransparency = 1
 	l.Text = text
 	l.TextColor3 = c.txt
@@ -298,8 +320,8 @@ local function mkInput(parent, text, opts)
 	l.Parent = row
 
 	local box = Instance.new("TextBox")
-	box.Size = UDim2.new(1, -88, 0, 24)
-	box.Position = UDim2.new(1, -8, 0.5, -12)
+	box.Size = UDim2.new(1, -108, 0, 26)
+	box.Position = UDim2.new(1, 0, 0.5, 0)
 	box.AnchorPoint = Vector2.new(1, 0.5)
 	box.BackgroundColor3 = c.inp
 	box.BorderSizePixel = 0
@@ -311,13 +333,12 @@ local function mkInput(parent, text, opts)
 	box.PlaceholderColor3 = c.dim
 	box.ClearTextOnFocus = false
 	box.Parent = row
-	local bc = Instance.new("UICorner")
-	bc.CornerRadius = UDim.new(0, 4)
-	bc.Parent = box
+	addCorner(box, 4)
+	local s = addStroke(box, c.brd)
 
-	if num then box.Text = tostring(def) end
-
+	box.Focused:Connect(function() tween(s, "Color", c.acc) end)
 	box.FocusLost:Connect(function()
+		tween(s, "Color", c.brd)
 		if num then
 			local n = tonumber(box.Text)
 			if n then box.Text = tostring(n) else box.Text = tostring(def) end
@@ -340,12 +361,12 @@ local function mkSlider(parent, text, opts)
 	local precise = opts.Precise or false
 
 	local row = Instance.new("Frame")
-	row.Size = UDim2.new(1, 0, 0, 36)
+	row.Size = UDim2.new(1, 0, 0, 42)
 	row.BackgroundTransparency = 1
 	row.Parent = parent
 
 	local l = Instance.new("TextLabel")
-	l.Size = UDim2.new(1, -80, 0, 18)
+	l.Size = UDim2.new(1, -80, 0, 20)
 	l.BackgroundTransparency = 1
 	l.Text = text
 	l.TextColor3 = c.txt
@@ -355,44 +376,40 @@ local function mkSlider(parent, text, opts)
 	l.Parent = row
 
 	local vl = Instance.new("TextLabel")
-	vl.Size = UDim2.new(0, 72, 0, 18)
-	vl.Position = UDim2.new(1, -72, 0, 0)
+	vl.Size = UDim2.new(0, 72, 0, 20)
+	vl.Position = UDim2.new(1, 0, 0, 0)
+	vl.AnchorPoint = Vector2.new(1, 0)
 	vl.BackgroundTransparency = 1
 	vl.Text = tostring(def) .. sfx
-	vl.TextColor3 = c.txt
-	vl.Font = Enum.Font.Gotham
+	vl.TextColor3 = c.acc
+	vl.Font = Enum.Font.GothamSemibold
 	vl.TextSize = 12
 	vl.TextXAlignment = Enum.TextXAlignment.Right
 	vl.Parent = row
 
 	local rail = Instance.new("Frame")
 	rail.Size = UDim2.new(1, 0, 0, 6)
-	rail.Position = UDim2.new(0, 0, 1, -6)
+	rail.Position = UDim2.new(0, 0, 1, -8)
 	rail.BackgroundColor3 = c.sl
 	rail.BorderSizePixel = 0
 	rail.Parent = row
-	local rc = Instance.new("UICorner")
-	rc.CornerRadius = UDim.new(0, 3)
-	rc.Parent = rail
+	addCorner(rail, 3)
 
 	local fill = Instance.new("Frame")
 	fill.Size = UDim2.new(0, 0, 1, 0)
 	fill.BackgroundColor3 = c.acc
 	fill.BorderSizePixel = 0
 	fill.Parent = rail
-	local fc = Instance.new("UICorner")
-	fc.CornerRadius = UDim.new(0, 3)
-	fc.Parent = fill
+	addCorner(fill, 3)
 
 	local k = Instance.new("Frame")
 	k.Size = UDim2.new(0, 12, 0, 12)
-	k.BackgroundColor3 = c.txt
+	k.BackgroundColor3 = Color3.new(1, 1, 1)
 	k.BorderSizePixel = 0
 	k.ZIndex = 2
 	k.Parent = row
-	local kc = Instance.new("UICorner")
-	kc.CornerRadius = UDim.new(0, 6)
-	kc.Parent = k
+	addCorner(k, 6)
+	addStroke(k, c.brd)
 
 	local val = def
 	local dragging = false
@@ -401,8 +418,8 @@ local function mkSlider(parent, text, opts)
 		val = math.clamp(v, mn, mx)
 		local t = (val - mn) / (mx - mn)
 		local w = rail.AbsoluteSize.X
-		fill.Size = UDim2.new(0, w * t, 1, 0)
-		k.Position = UDim2.new(0, rail.AbsolutePosition.X - row.AbsolutePosition.X + w * t - 6, 0.5, -6)
+		fill.Size = UDim2.new(t, 0, 1, 0)
+		k.Position = UDim2.new(0, rail.AbsolutePosition.X - row.AbsolutePosition.X + (w * t) - 6, 0.5, 7)
 		local str = if precise then string.format("%.1f", val) else tostring(math.floor(val))
 		vl.Text = str .. sfx
 		pcall(cb, val)
@@ -452,12 +469,12 @@ local function mkDropdown(parent, text, opts)
 	local cb = opts.Callback or function() end
 
 	local row = Instance.new("Frame")
-	row.Size = UDim2.new(1, 0, 0, 28)
+	row.Size = UDim2.new(1, 0, 0, 32)
 	row.BackgroundTransparency = 1
 	row.Parent = parent
 
 	local l = Instance.new("TextLabel")
-	l.Size = UDim2.new(0, 80, 1, 0)
+	l.Size = UDim2.new(0, 100, 1, 0)
 	l.BackgroundTransparency = 1
 	l.Text = text
 	l.TextColor3 = c.txt
@@ -467,20 +484,19 @@ local function mkDropdown(parent, text, opts)
 	l.Parent = row
 
 	local disp = Instance.new("TextButton")
-	disp.Size = UDim2.new(1, -88, 0, 24)
-	disp.Position = UDim2.new(1, -8, 0.5, -12)
+	disp.Size = UDim2.new(1, -108, 0, 26)
+	disp.Position = UDim2.new(1, 0, 0.5, 0)
 	disp.AnchorPoint = Vector2.new(1, 0.5)
 	disp.BackgroundColor3 = c.inp
 	disp.BorderSizePixel = 0
-	disp.Text = def == "" and "Select..." or def
+	disp.Text = def == "" and "Select Option..." or def
 	disp.TextColor3 = c.txt
 	disp.Font = Enum.Font.Gotham
 	disp.TextSize = 13
 	disp.AutoButtonColor = false
 	disp.Parent = row
-	local dc = Instance.new("UICorner")
-	dc.CornerRadius = UDim.new(0, 4)
-	dc.Parent = disp
+	addCorner(disp, 4)
+	addStroke(disp, c.brd)
 
 	local arr = Instance.new("TextLabel")
 	arr.Size = UDim2.new(0, 18, 1, 0)
@@ -493,59 +509,62 @@ local function mkDropdown(parent, text, opts)
 	arr.Parent = disp
 
 	local dd = Instance.new("ScrollingFrame")
-	dd.Size = UDim2.new(1, -88, 0, 0)
-	dd.Position = UDim2.new(1, -8, 1, 2)
+	dd.Size = UDim2.new(1, -108, 0, 0)
+	dd.Position = UDim2.new(1, 0, 1, 4)
 	dd.AnchorPoint = Vector2.new(1, 0)
 	dd.BackgroundColor3 = c.darker
 	dd.BorderSizePixel = 0
 	dd.Visible = false
-	dd.ScrollBarThickness = 2
-	dd.ScrollBarImageColor3 = c.brd
+	dd.ScrollBarThickness = 3
+	dd.ScrollBarImageColor3 = c.acc
 	dd.AutomaticCanvasSize = Enum.AutomaticSize.Y
-	dd.ZIndex = 20
+	dd.ZIndex = 30
 	dd.Parent = row
-	local dPad = Instance.new("UIPadding")
-	dPad.PaddingTop = UDim.new(0, 2)
-	dPad.PaddingBottom = UDim.new(0, 2)
-	dPad.Parent = dd
+	addCorner(dd, 4)
+	addStroke(dd, c.brd)
+
 	local dList = Instance.new("UIListLayout")
 	dList.Padding = UDim.new(0, 2)
 	dList.Parent = dd
+	local dPad = Instance.new("UIPadding")
+	dPad.PaddingTop = UDim.new(0, 4)
+	dPad.PaddingBottom = UDim.new(0, 4)
+	dPad.PaddingLeft = UDim.new(0, 4)
+	dPad.PaddingRight = UDim.new(0, 4)
+	dPad.Parent = dd
 
 	local sel = def
 
 	local function build()
 		for _, v in ipairs(dd:GetChildren()) do
-			if v:IsA("TextButton") or v:IsA("UIListLayout") or v:IsA("UIPadding") then v:Destroy() end
+			if v:IsA("TextButton") then v:Destroy() end
 		end
-		local nl = Instance.new("UIListLayout")
-		nl.Padding = UDim.new(0, 2)
-		nl.Parent = dd
-		local np = Instance.new("UIPadding")
-		np.PaddingTop = UDim.new(0, 2)
-		np.PaddingBottom = UDim.new(0, 2)
-		np.Parent = dd
 		for _, item in ipairs(items) do
 			local ib = Instance.new("TextButton")
-			ib.Size = UDim2.new(1, -4, 0, 24)
-			ib.Position = UDim2.new(0, 2, 0, 0)
+			ib.Size = UDim2.new(1, 0, 0, 24)
+			ib.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 			ib.BackgroundTransparency = 1
-			ib.BorderSizePixel = 0
 			ib.Text = item
 			ib.TextColor3 = c.txt
 			ib.Font = Enum.Font.Gotham
-			ib.TextSize = 13
+			ib.TextSize = 12
 			ib.AutoButtonColor = false
-			ib.ZIndex = 21
+			ib.ZIndex = 32
 			ib.Parent = dd
-			ib.MouseEnter:Connect(function() tweenBg(ib, c.hover, 0) end)
-			ib.MouseLeave:Connect(function() tweenBg(ib, c.darker, 1) end)
+			addCorner(ib, 4)
+
+			ib.MouseEnter:Connect(function() 
+				tween(ib, "BackgroundTransparency", 0.9)
+				tween(ib, "BackgroundColor3", c.txt)
+			end)
+			ib.MouseLeave:Connect(function() 
+				tween(ib, "BackgroundTransparency", 1)
+			end)
 			ib.MouseButton1Click:Connect(function()
 				sel = item; disp.Text = item; dd.Visible = false
 				pcall(cb, item)
 			end)
 		end
-		dd.CanvasSize = UDim2.new(0, 0, 0, dList.AbsoluteContentSize.Y)
 	end
 
 	build()
@@ -553,23 +572,31 @@ local function mkDropdown(parent, text, opts)
 	disp.MouseButton1Click:Connect(function()
 		dd.Visible = not dd.Visible
 		if dd.Visible then
-			dd.Size = UDim2.new(1, -88, 0, math.min(dList.AbsoluteContentSize.Y + 4, 150))
+			dd.Size = UDim2.new(1, -108, 0, math.min(dList.AbsoluteContentSize.Y + 8, 140))
 		end
 	end)
 
 	UIS.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			local p = input.Position
-			local ap = row.AbsolutePosition; local asz = row.AbsoluteSize
 			local dap = dd.AbsolutePosition; local dasz = dd.AbsoluteSize
-			if dd.Visible and not (
-				(p.X >= ap.X and p.X <= ap.X + asz.X and p.Y >= ap.Y and p.Y <= ap.Y + asz.Y) or
-				(p.X >= dap.X and p.X <= dap.X + dasz.X and p.Y >= dap.Y and p.Y <= dap.Y + dasz.Y)
-			) then dd.Visible = false end
+			if dd.Visible and not (p.X >= dap.X and p.X <= dap.X + dasz.X and p.Y >= dap.Y and p.Y <= dap.Y + dasz.Y) then
+				if not (p.X >= disp.AbsolutePosition.X and p.X <= disp.AbsolutePosition.X + disp.AbsoluteSize.X and p.Y >= disp.AbsolutePosition.Y and p.Y <= disp.AbsolutePosition.Y + disp.AbsoluteSize.Y) then
+					dd.Visible = false
+				end
+			end
 		end
 	end)
 
-	local obj = {SetValue = function(v) sel = v; disp.Text = v; pcall(cb, v) end, GetValue = function() return sel end}
+	local obj = {
+		SetValue = function(v) sel = v; disp.Text = v; pcall(cb, v) end,
+		GetValue = function() return sel end,
+		Refresh = function(newItems)
+			items = newItems
+			build()
+			dd.Visible = false
+		end,
+	}
 	regObj(opts.Id or opts.id or text, obj)
 	return obj
 end
@@ -580,7 +607,7 @@ local function mkColorPicker(parent, text, opts)
 	local cb = opts.Callback or function() end
 
 	local row = Instance.new("Frame")
-	row.Size = UDim2.new(1, 0, 0, 28)
+	row.Size = UDim2.new(1, 0, 0, 32)
 	row.BackgroundTransparency = 1
 	row.Parent = parent
 
@@ -595,19 +622,15 @@ local function mkColorPicker(parent, text, opts)
 	l.Parent = row
 
 	local sw = Instance.new("ImageButton")
-	sw.Size = UDim2.new(0, 22, 0, 22)
-	sw.Position = UDim2.new(1, -28, 0.5, -11)
+	sw.Size = UDim2.new(0, 24, 0, 20)
+	sw.Position = UDim2.new(1, 0, 0.5, 0)
+	sw.AnchorPoint = Vector2.new(1, 0.5)
 	sw.BackgroundColor3 = def
 	sw.BorderSizePixel = 0
 	sw.AutoButtonColor = false
 	sw.Parent = row
-	local swc = Instance.new("UICorner")
-	swc.CornerRadius = UDim.new(0, 4)
-	swc.Parent = sw
-	local sws = Instance.new("UIStroke")
-	sws.Color = c.brd
-	sws.Thickness = 1
-	sws.Parent = sw
+	addCorner(sw, 4)
+	addStroke(sw, c.brd)
 
 	local col = def
 
@@ -617,42 +640,38 @@ local function mkColorPicker(parent, text, opts)
 		pk.Size = UDim2.new(0, 180, 0, 160)
 		pk.BackgroundColor3 = c.darker
 		pk.BorderSizePixel = 0
-		pk.ZIndex = 20
+		pk.ZIndex = 50
+		pk.Position = UDim2.new(0, sw.AbsolutePosition.X - 190, 0, sw.AbsolutePosition.Y)
 		pk.Parent = gui
-		local pkC = Instance.new("UICorner")
-		pkC.CornerRadius = UDim.new(0, 4)
-		pkC.Parent = pk
-		local pkS = Instance.new("UIStroke")
-		pkS.Color = c.brd
-		pkS.Parent = pk
+		addCorner(pk, 6)
+		addStroke(pk, c.brd, 1.5)
 
 		local h, s, v = Color3.toHSV(col)
 
 		local sv = Instance.new("ImageLabel")
-		sv.Size = UDim2.new(0, 150, 0, 120)
+		sv.Size = UDim2.new(0, 164, 0, 115)
 		sv.Position = UDim2.new(0, 8, 0, 8)
 		sv.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
 		sv.Image = "rbxassetid://4155801252"
-		sv.ZIndex = 21
+		sv.ZIndex = 51
 		sv.Parent = pk
+		addCorner(sv, 4)
 
 		local cur = Instance.new("Frame")
 		cur.Size = UDim2.new(0, 8, 0, 8)
 		cur.BackgroundColor3 = Color3.new(1, 1, 1)
-		cur.BorderSizePixel = 1
-		cur.BorderColor3 = Color3.new(0, 0, 0)
-		cur.ZIndex = 22
+		cur.ZIndex = 52
 		cur.Parent = sv
-		local curC = Instance.new("UICorner")
-		curC.CornerRadius = UDim.new(1, 0)
-		curC.Parent = cur
+		addCorner(cur, 4)
+		addStroke(cur, Color3.new(0, 0, 0))
 
 		local hb = Instance.new("Frame")
-		hb.Size = UDim2.new(0, 150, 0, 12)
+		hb.Size = UDim2.new(0, 164, 0, 12)
 		hb.Position = UDim2.new(0, 8, 0, 134)
-		hb.BackgroundTransparency = 1
-		hb.ZIndex = 21
+		hb.ZIndex = 51
 		hb.Parent = pk
+		addCorner(hb, 2)
+
 		local hg = Instance.new("UIGradient")
 		hg.Color = ColorSequence.new({
 			ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
@@ -667,18 +686,19 @@ local function mkColorPicker(parent, text, opts)
 
 		local hc = Instance.new("Frame")
 		hc.Size = UDim2.new(0, 4, 1, 2)
+		hc.Position = UDim2.new(0, 0, 0, -1)
 		hc.BackgroundColor3 = Color3.new(1, 1, 1)
-		hc.BorderSizePixel = 1
-		hc.BorderColor3 = Color3.new(0, 0, 0)
-		hc.ZIndex = 22
+		hc.ZIndex = 52
 		hc.Parent = hb
+		addCorner(hc, 2)
+		addStroke(hc, Color3.new(0, 0, 0))
 
 		local function upd()
 			local cl = Color3.fromHSV(h, s, v)
 			col = cl; sw.BackgroundColor3 = cl
 			sv.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
-			cur.Position = UDim2.new(s, -cur.AbsoluteSize.X / 2, 1 - v, -cur.AbsoluteSize.Y / 2)
-			hc.Position = UDim2.new(h, -hc.AbsoluteSize.X / 2, 0, 0)
+			cur.Position = UDim2.new(s, -4, 1 - v, -4)
+			hc.Position = UDim2.new(h, -2, 0, -1)
 			pcall(cb, cl)
 		end
 
@@ -687,43 +707,41 @@ local function mkColorPicker(parent, text, opts)
 			if inp.UserInputType == Enum.UserInputType.MouseButton1 then
 				ds = true
 				local m = UIS:GetMouseLocation()
-				local ap = sv.AbsolutePosition; local asz = sv.AbsoluteSize
-				s = math.clamp((m.X - ap.X) / asz.X, 0, 1)
-				v = 1 - math.clamp((m.Y - ap.Y) / asz.Y, 0, 1)
+				s = math.clamp((m.X - sv.AbsolutePosition.X) / sv.AbsoluteSize.X, 0, 1)
+				v = 1 - math.clamp((m.Y - sv.AbsolutePosition.Y) / sv.AbsoluteSize.Y, 0, 1)
 				upd()
 			end
-		end)
-		sv.InputEnded:Connect(function(inp)
-			if inp.UserInputType == Enum.UserInputType.MouseButton1 then ds = false end
 		end)
 
 		hb.InputBegan:Connect(function(inp)
 			if inp.UserInputType == Enum.UserInputType.MouseButton1 then
 				dh = true
 				local m = UIS:GetMouseLocation()
-				local ap = hb.AbsolutePosition; local asz = hb.AbsoluteSize
-				h = math.clamp((m.X - ap.X) / asz.X, 0, 1)
+				h = math.clamp((m.X - hb.AbsolutePosition.X) / hb.AbsoluteSize.X, 0, 1)
 				upd()
 			end
-		end)
-		hb.InputEnded:Connect(function(inp)
-			if inp.UserInputType == Enum.UserInputType.MouseButton1 then dh = false end
 		end)
 
 		UIS.InputChanged:Connect(function(inp)
 			if inp.UserInputType == Enum.UserInputType.MouseMovement then
+				local m = UIS:GetMouseLocation()
 				if ds then
-					local m = UIS:GetMouseLocation()
-					local ap = sv.AbsolutePosition; local asz = sv.AbsoluteSize
-					s = math.clamp((m.X - ap.X) / asz.X, 0, 1)
-					v = 1 - math.clamp((m.Y - ap.Y) / asz.Y, 0, 1)
+					s = math.clamp((m.X - sv.AbsolutePosition.X) / sv.AbsoluteSize.X, 0, 1)
+					v = 1 - math.clamp((m.Y - sv.AbsolutePosition.Y) / sv.AbsoluteSize.Y, 0, 1)
 					upd()
 				end
 				if dh then
-					local m = UIS:GetMouseLocation()
-					local ap = hb.AbsolutePosition; local asz = hb.AbsoluteSize
-					h = math.clamp((m.X - ap.X) / asz.X, 0, 1)
+					h = math.clamp((m.X - hb.AbsolutePosition.X) / hb.AbsoluteSize.X, 0, 1)
 					upd()
+				end
+			end
+		end)
+
+		UIS.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 then
+				local p = input.Position
+				if not (p.X >= pk.AbsolutePosition.X and p.X <= pk.AbsolutePosition.X + pk.AbsoluteSize.X and p.Y >= pk.AbsolutePosition.Y and p.Y <= pk.AbsolutePosition.Y + pk.AbsoluteSize.Y) then
+					pk:Destroy()
 				end
 			end
 		end)
@@ -743,7 +761,7 @@ local function mkKeybind(parent, text, opts)
 	local onChange = opts.OnChange or function() end
 
 	local row = Instance.new("Frame")
-	row.Size = UDim2.new(1, 0, 0, 28)
+	row.Size = UDim2.new(1, 0, 0, 32)
 	row.BackgroundTransparency = 1
 	row.Parent = parent
 
@@ -758,38 +776,31 @@ local function mkKeybind(parent, text, opts)
 	l.Parent = row
 
 	local btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(0, 0, 0, 22)
-	btn.Position = UDim2.new(1, -6, 0.5, -11)
+	btn.Size = UDim2.new(0, 40, 0, 22)
+	btn.Position = UDim2.new(1, 0, 0.5, 0)
 	btn.AnchorPoint = Vector2.new(1, 0.5)
 	btn.BackgroundColor3 = c.inp
 	btn.BorderSizePixel = 0
 	btn.Text = def
-	btn.TextColor3 = c.txt
-	btn.Font = Enum.Font.Gotham
-	btn.TextSize = 13
+	btn.TextColor3 = c.acc
+	btn.Font = Enum.Font.GothamSemibold
+	btn.TextSize = 12
 	btn.AutoButtonColor = false
 	btn.Parent = row
-	local bc = Instance.new("UICorner")
-	bc.CornerRadius = UDim.new(0, 4)
-	bc.Parent = btn
+	addCorner(btn, 4)
+	addStroke(btn, c.brd)
 
 	local key = def
 
 	local function updateSize()
-		local x, y = TextService:GetTextBoundsAsync({
-			Text = btn.Text,
-			Font = btn.Font,
-			Size = btn.TextSize,
-			Width = 200,
-		})
-		btn.Size = UDim2.new(0, x + 14, 0, 22)
+		local x = TextService:GetTextSize(btn.Text, btn.TextSize, btn.Font, Vector2.new(200, 30)).X
+		btn.Size = UDim2.new(0, x + 16, 0, 22)
 	end
 
 	local picking = false
 	btn.MouseButton1Click:Connect(function()
 		if picking then return end
 		picking = true
-		local old = btn.Text
 		btn.Text = "..."
 		updateSize()
 		local inp = UIS.InputBegan:Wait()
@@ -801,7 +812,7 @@ local function mkKeybind(parent, text, opts)
 		elseif inp.UserInputType == Enum.UserInputType.MouseButton2 then
 			newKey = "MB2"
 		else
-			newKey = old
+			newKey = "None"
 		end
 		key = newKey
 		btn.Text = key
@@ -821,22 +832,20 @@ local function mkKeybind(parent, text, opts)
 	return obj
 end
 
--- Category system ---------------------------------------------------
+-- Category system ---------------------------------------------------[cite: 1]
 
 local function makeCategory(tab, name)
 	local page = tab.Content
 	local cat = Instance.new("Frame")
-	cat.Size = UDim2.new(1, 0, 0, 34)
+	cat.Size = UDim2.new(1, 0, 0, 38)
 	cat.BackgroundColor3 = c.darker
 	cat.BorderSizePixel = 0
 	cat.Parent = page
-
-	local catC = Instance.new("UICorner")
-	catC.CornerRadius = UDim.new(0, 4)
-	catC.Parent = cat
+	addCorner(cat, 6)
+	addStroke(cat, c.brd)
 
 	local hdr = Instance.new("TextButton")
-	hdr.Size = UDim2.new(1, 0, 0, 34)
+	hdr.Size = UDim2.new(1, 0, 0, 38)
 	hdr.BackgroundTransparency = 1
 	hdr.Text = ""
 	hdr.AutoButtonColor = false
@@ -844,19 +853,19 @@ local function makeCategory(tab, name)
 	hdr.Parent = cat
 
 	local arrow = Instance.new("TextLabel")
-	arrow.Size = UDim2.new(0, 16, 0, 34)
-	arrow.Position = UDim2.new(0, 8, 0, 0)
+	arrow.Size = UDim2.new(0, 16, 0, 38)
+	arrow.Position = UDim2.new(0, 12, 0, 0)
 	arrow.BackgroundTransparency = 1
-	arrow.Text = ">"
+	arrow.Text = "▼"
 	arrow.TextColor3 = c.dim
 	arrow.Font = Enum.Font.Gotham
-	arrow.TextSize = 13
-	arrow.Rotation = 90
+	arrow.TextSize = 12
+	arrow.Rotation = 0
 	arrow.Parent = hdr
 
 	local tl = Instance.new("TextLabel")
-	tl.Size = UDim2.new(1, -34, 1, 0)
-	tl.Position = UDim2.new(0, 26, 0, 0)
+	tl.Size = UDim2.new(1, -44, 1, 0)
+	tl.Position = UDim2.new(0, 34, 0, 0)
 	tl.BackgroundTransparency = 1
 	tl.Text = name
 	tl.TextColor3 = c.txt
@@ -867,18 +876,21 @@ local function makeCategory(tab, name)
 
 	local cont = Instance.new("Frame")
 	cont.Size = UDim2.new(1, 0, 0, 0)
-	cont.Position = UDim2.new(0, 0, 0, 34)
+	cont.Position = UDim2.new(0, 0, 0, 38)
 	cont.BackgroundTransparency = 1
+	cont.ClipsDescendants = true
 	cont.Parent = cat
 
 	local lst = Instance.new("UIListLayout")
-	lst.Padding = UDim.new(0, 4)
+	local paddingAmount = 6
+	lst.Padding = UDim.new(0, paddingAmount)
 	lst.SortOrder = Enum.SortOrder.LayoutOrder
 	lst.Parent = cont
 	local pad = Instance.new("UIPadding")
-	pad.PaddingLeft = UDim.new(0, 10)
-	pad.PaddingRight = UDim.new(0, 10)
-	pad.PaddingBottom = UDim.new(0, 6)
+	pad.PaddingLeft = UDim.new(0, 12)
+	pad.PaddingRight = UDim.new(0, 12)
+	pad.PaddingBottom = UDim.new(0, 10)
+	pad.PaddingTop = UDim.new(0, 4)
 	pad.Parent = cont
 
 	local con = {
@@ -886,30 +898,25 @@ local function makeCategory(tab, name)
 		Tab = tab, Expanded = true, Name = name,
 	}
 
-	lst:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+	local function resize()
 		if con.Expanded then
-			local ch = lst.AbsoluteContentSize.Y
+			local ch = lst.AbsoluteContentSize.Y + 14
 			cont.Size = UDim2.new(1, 0, 0, ch)
-			cat.Size = UDim2.new(1, 0, 0, 34 + ch + 6)
+			cat.Size = UDim2.new(1, 0, 0, 38 + ch)
 		end
-	end)
+	end
+
+	lst:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(resize)
 
 	hdr.MouseButton1Click:Connect(function()
 		con.Expanded = not con.Expanded
-		local ch = lst.AbsoluteContentSize.Y
-		local h = if con.Expanded then ch else 0
-		local eas = if con.Expanded then Enum.EasingStyle.Elastic else Enum.EasingStyle.Quad
-		Tween:Create(cont, TweenInfo.new(0.3, eas, Enum.EasingDirection.Out),
-			{Size = UDim2.new(1, 0, 0, h)}):Play()
-		Tween:Create(arrow, TweenInfo.new(0.3, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out),
-			{Rotation = if con.Expanded then 90 else 0}):Play()
-		if con.Expanded then
-			cat:TweenSize(UDim2.new(1, 0, 0, 34 + ch + 6),
-				Enum.EasingDirection.Out, eas, 0.3, true)
-		else
-			cat:TweenSize(UDim2.new(1, 0, 0, 34 + 0 + 6),
-				Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.2, true)
-		end
+		local ch = lst.AbsoluteContentSize.Y + 14
+		local targetH = if con.Expanded then ch else 0
+		local targetRot = if con.Expanded then 0 else -90
+		
+		Tween:Create(cont, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Size = UDim2.new(1, 0, 0, targetH)}):Play()
+		Tween:Create(arrow, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Rotation = targetRot}):Play()
+		Tween:Create(cat, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Size = UDim2.new(1, 0, 0, 38 + targetH)}):Play()
 	end)
 
 	con.AddLabel = function(_, txt) return mkLabel(cont, txt) end
@@ -926,48 +933,21 @@ local function makeCategory(tab, name)
 	return con
 end
 
--- Tab methods -------------------------------------------------------
-
+-- Tab methods -------------------------------------------------------[cite: 1]
 local tabMt = {}
+function tabMt:AddCategory(name) return makeCategory(self, name) end
+function tabMt:AddLabel(text) return mkLabel(self.Content, text) end
+function tabMt:AddDivider() return mkDivider(self.Content) end
+function tabMt:AddButton(text, cb) return mkButton(self.Content, text, cb) end
+function tabMt:AddToggle(text, opts) return mkToggle(self.Content, text, opts) end
+function tabMt:AddInput(text, opts) return mkInput(self.Content, text, opts) end
+function tabMt:AddSlider(text, opts) return mkSlider(self.Content, text, opts) end
+function tabMt:AddDropdown(text, opts) return mkDropdown(self.Content, text, opts) end
+function tabMt:AddColorPicker(text, opts) return mkColorPicker(self.Content, text, opts) end
+function tabMt:AddKeybind(text, opts) return mkKeybind(self.Content, text, opts) end
 
-function tabMt:AddCategory(name)
-	return makeCategory(self, name)
-end
-
-function tabMt:AddLabel(text)
-	return mkLabel(self.Content, text)
-end
-
-function tabMt:AddDivider()
-	return mkDivider(self.Content)
-end
-
-function tabMt:AddButton(text, cb)
-	return mkButton(self.Content, text, cb)
-end
-function tabMt:AddToggle(text, opts)
-	return mkToggle(self.Content, text, opts)
-end
-function tabMt:AddInput(text, opts)
-	return mkInput(self.Content, text, opts)
-end
-function tabMt:AddSlider(text, opts)
-	return mkSlider(self.Content, text, opts)
-end
-function tabMt:AddDropdown(text, opts)
-	return mkDropdown(self.Content, text, opts)
-end
-function tabMt:AddColorPicker(text, opts)
-	return mkColorPicker(self.Content, text, opts)
-end
-function tabMt:AddKeybind(text, opts)
-	return mkKeybind(self.Content, text, opts)
-end
-
--- Window methods ----------------------------------------------------
-
+-- Window methods ----------------------------------------------------[cite: 1]
 local winMt = {}
-
 function winMt:AddTab(name)
 	local tab = setmetatable({
 		Name = name, Button = nil, Content = nil, Label = nil, Icon = nil,
@@ -983,18 +963,13 @@ function winMt:Destroy()
 	self.ScreenGui = nil
 end
 
-function winMt:SetToggleKey(keyCode)
-	self.ToggleKey = keyCode
-end
-
-function winMt:Build()
-	self:_build()
-end
+function winMt:SetToggleKey(keyCode) self.ToggleKey = keyCode end
+function winMt:Build() self:_build() end
 
 function Lib:CreateWindow(opts)
 	opts = opts or {}
-	local title = opts.Title or "Undetected Dynamic"
-	local size = opts.Size or Vector2.new(580, 400)
+	local title = opts.Title or "Premium Suite"
+	local size = opts.Size or Vector2.new(580, 410)
 	local toggleKey = opts.ToggleKey or Enum.KeyCode.RightControl
 
 	local win = setmetatable({
@@ -1006,7 +981,7 @@ function Lib:CreateWindow(opts)
 
 	win._build = function()
 		local gui = Instance.new("ScreenGui")
-		gui.Name = "UI_" .. math.random(1000, 9999)
+		gui.Name = "Obsidian_" .. math.random(1000, 9999)
 		gui.ResetOnSpawn = false
 		gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 		gui.DisplayOrder = 999
@@ -1021,41 +996,54 @@ function Lib:CreateWindow(opts)
 		mf.Active = true
 		mf.Parent = gui
 		win.MainFrame = mf
+		addCorner(mf, 8)
+		addStroke(mf, c.brd, 1.5)
 
 		local tb = Instance.new("Frame")
 		tb.Size = UDim2.new(1, 0, 0, 44)
 		tb.BackgroundColor3 = c.dark
 		tb.BorderSizePixel = 0
 		tb.Parent = mf
+		addCorner(tb, 8)
+
+		-- Fixed upper rounding gap
+		local gapFill = Instance.new("Frame")
+		gapFill.Size = UDim2.new(1, 0, 0, 8)
+		gapFill.Position = UDim2.new(0, 0, 1, -8)
+		gapFill.BackgroundColor3 = c.dark
+		gapFill.BorderSizePixel = 0
+		gapFill.Parent = tb
 
 		local lbl = Instance.new("TextLabel")
-		lbl.Size = UDim2.new(1, -34, 1, 0)
+		lbl.Size = UDim2.new(1, -80, 1, 0)
+		lbl.Position = UDim2.new(0, 45, 0, 0)
 		lbl.BackgroundTransparency = 1
 		lbl.Text = title
 		lbl.TextColor3 = c.txt
 		lbl.Font = Enum.Font.GothamSemibold
-		lbl.TextSize = 15
-		lbl.TextXAlignment = Enum.TextXAlignment.Center
+		lbl.TextSize = 14
+		lbl.TextXAlignment = Enum.TextXAlignment.Left
 		lbl.Parent = tb
 
 		local x = Instance.new("TextButton")
-		x.Size = UDim2.new(0, 34, 1, 0)
-		x.Position = UDim2.new(1, -34, 0, 0)
+		x.Size = UDim2.new(0, 44, 0, 44)
+		x.Position = UDim2.new(1, 0, 0, 0)
+		x.AnchorPoint = Vector2.new(1, 0)
 		x.BackgroundTransparency = 1
-		x.Text = "X"
+		x.Text = "✕"
 		x.TextColor3 = c.dim
 		x.Font = Enum.Font.Gotham
-		x.TextSize = 15
+		x.TextSize = 14
 		x.AutoButtonColor = false
 		x.ZIndex = 3
 		x.Parent = tb
 
-		local uic = GetIcon("user")
+		local uic = GetIcon("menu")
 		local toggle = Instance.new("ImageButton")
-		toggle.Size = UDim2.new(0, 32, 0, 32)
-		toggle.Position = UDim2.new(0, 8, 0.5, -16)
-		toggle.BackgroundColor3 = c.darker
-		toggle.BorderSizePixel = 0
+		toggle.Size = UDim2.new(0, 26, 0, 26)
+		toggle.Position = UDim2.new(0, 10, 0.5, -13)
+		toggle.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+		toggle.BackgroundTransparency = 1
 		toggle.Image = uic and uic.Url or ""
 		if uic then
 			toggle.ImageRectSize = uic.ImageRectSize
@@ -1066,13 +1054,6 @@ function Lib:CreateWindow(opts)
 		toggle.AutoButtonColor = false
 		toggle.ZIndex = 10
 		toggle.Parent = tb
-		local tc = Instance.new("UICorner")
-		tc.CornerRadius = UDim.new(0, 4)
-		tc.Parent = toggle
-		local ts = Instance.new("UIStroke")
-		ts.Color = c.brd
-		ts.Thickness = 1.5
-		ts.Parent = toggle
 
 		local ca = Instance.new("Frame")
 		ca.Size = UDim2.new(1, 0, 1, -44)
@@ -1081,86 +1062,78 @@ function Lib:CreateWindow(opts)
 		ca.Parent = mf
 
 		local sb = Instance.new("Frame")
-		sb.Size = UDim2.new(0, 180, 1, 0)
+		sb.Size = UDim2.new(0, 170, 1, 0)
 		sb.BackgroundColor3 = c.darker
 		sb.BorderSizePixel = 0
 		sb.Parent = ca
 		win.Sidebar = sb
 
 		local si = Instance.new("Frame")
-		si.Size = UDim2.new(1, -8, 1, -8)
-		si.Position = UDim2.new(0, 4, 0, 4)
+		si.Size = UDim2.new(1, -16, 1, -16)
+		si.Position = UDim2.new(0, 8, 0, 8)
 		si.BackgroundTransparency = 1
 		si.Parent = sb
 
+		local sList = Instance.new("UIListLayout")
+		sList.Padding = UDim.new(0, 6)
+		sList.Parent = si
+
 		local sd = Instance.new("Frame")
 		sd.Size = UDim2.new(0, 1, 1, 0)
-		sd.Position = UDim2.new(0, 180, 0, 0)
+		sd.Position = UDim2.new(0, 170, 0, 0)
 		sd.BackgroundColor3 = c.brd
 		sd.BorderSizePixel = 0
 		sd.ZIndex = 5
 		sd.Parent = ca
 
 		local mc = Instance.new("Frame")
-		mc.Size = UDim2.new(1, -181, 1, 0)
-		mc.Position = UDim2.new(0, 181, 0, 0)
+		mc.Size = UDim2.new(1, -171, 1, 0)
+		mc.Position = UDim2.new(0, 171, 0, 0)
 		mc.BackgroundColor3 = c.bg
 		mc.BorderSizePixel = 0
 		mc.Parent = ca
 		win.MainContent = mc
 
-		-- Tab buttons + pages
+		-- Build Tab pages cleanly[cite: 1]
 		for i, tab in ipairs(win.Tabs) do
-			local iname = i == 1 and "user" or "cog"
+			local iname = i == 1 and "layers" or "sliders"
 			local ia = GetIcon(iname)
 
 			local btn = Instance.new("TextButton")
-			btn.Size = UDim2.new(1, 0, 0, 44)
-			btn.Position = UDim2.new(0, 0, 0, (i - 1) * 50)
+			btn.Size = UDim2.new(1, 0, 0, 36)
 			btn.BackgroundColor3 = c.darker
 			btn.BorderSizePixel = 0
 			btn.Text = ""
 			btn.AutoButtonColor = false
 			btn.ClipsDescendants = true
 			btn.Parent = si
-
-			local bc = Instance.new("UICorner")
-			bc.CornerRadius = UDim.new(0, 4)
-			bc.Parent = btn
+			addCorner(btn, 5)
 
 			local ic = Instance.new("ImageLabel")
-			ic.Size = UDim2.new(0, 24, 0, 24)
-			ic.Position = UDim2.new(0, 6, 0.5, -12)
-			ic.BackgroundColor3 = c.darker
-			ic.BorderSizePixel = 0
+			ic.Size = UDim2.new(0, 18, 0, 18)
+			ic.Position = UDim2.new(0, 10, 0.5, -9)
+			ic.BackgroundTransparency = 1
 			ic.Image = ia and ia.Url or ""
 			if ia then
 				ic.ImageRectSize = ia.ImageRectSize
 				ic.ImageRectOffset = ia.ImageRectOffset
 			end
-			ic.ImageColor3 = c.txt
+			ic.ImageColor3 = c.dim
 			ic.ScaleType = Enum.ScaleType.Fit
 			ic.Parent = btn
-			local icC = Instance.new("UICorner")
-			icC.CornerRadius = UDim.new(0, 4)
-			icC.Parent = ic
-			local icS = Instance.new("UIStroke")
-			icS.Color = c.brd
-			icS.Thickness = 1
-			icS.Parent = ic
 
-			local lbl = Instance.new("TextLabel")
-			lbl.Size = UDim2.new(1, -40, 1, 0)
-			lbl.Position = UDim2.new(0, 40, 0, 0)
-			lbl.BackgroundTransparency = 1
-			lbl.Text = tab.Name
-			lbl.TextColor3 = c.txt
-			lbl.Font = Enum.Font.GothamSemibold
-			lbl.TextSize = 14
-			lbl.TextXAlignment = Enum.TextXAlignment.Center
-			lbl.Parent = btn
+			local tabLbl = Instance.new("TextLabel")
+			tabLbl.Size = UDim2.new(1, -38, 1, 0)
+			tabLbl.Position = UDim2.new(0, 38, 0, 0)
+			tabLbl.BackgroundTransparency = 1
+			tabLbl.Text = tab.Name
+			tabLbl.TextColor3 = c.dim
+			tabLbl.Font = Enum.Font.GothamSemibold
+			tabLbl.TextSize = 13
+			tabLbl.TextXAlignment = Enum.TextXAlignment.Left
+			tabLbl.Parent = btn
 
-			tab.Button = btn; tab.Label = lbl; tab.Icon = ic
+			tab.Button = btn; tab.Label = tabLbl; tab.Icon = ic
 
 			local page = Instance.new("ScrollingFrame")
 			page.Size = UDim2.new(1, 0, 1, 0)
@@ -1173,69 +1146,72 @@ function Lib:CreateWindow(opts)
 			page.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
 			local pp = Instance.new("UIPadding")
-			pp.PaddingTop = UDim.new(0, 8)
-			pp.PaddingLeft = UDim.new(0, 8)
-			pp.PaddingRight = UDim.new(0, 8)
-			pp.PaddingBottom = UDim.new(0, 8)
+			pp.PaddingTop = UDim.new(0, 12)
+			pp.PaddingLeft = UDim.new(0, 12)
+			pp.PaddingRight = UDim.new(0, 12)
+			pp.PaddingBottom = UDim.new(0, 12)
 			pp.Parent = page
 			local pl = Instance.new("UIListLayout")
-			pl.Padding = UDim.new(0, 6)
+			pl.Padding = UDim.new(0, 8)
 			pl.SortOrder = Enum.SortOrder.LayoutOrder
 			pl.Parent = page
-			page.Layout = pl
 
 			tab.Content = page
 
-			-- reparent categories created before Build
 			for _, cat in ipairs(tab.Categories) do
 				if cat.Category and cat.Category.Parent ~= page then
 					cat.Category.Parent = page
 				end
 			end
 
-			btn.MouseEnter:Connect(function() tweenBg(btn, c.hover, 0) end)
+			btn.MouseEnter:Connect(function() 
+				if win.ActiveTab ~= tab then 
+					tween(btn, "BackgroundColor3", c.hover) 
+				end 
+			end)
 			btn.MouseLeave:Connect(function()
-				if win.ActiveTab ~= tab then tweenBg(btn, c.darker, 0) end
+				if win.ActiveTab ~= tab then 
+					tween(btn, "BackgroundColor3", c.darker) 
+				end
 			end)
 			btn.MouseButton1Click:Connect(function()
 				if win.ActiveTab then
-					tweenBg(win.ActiveTab.Button, c.darker, 0)
+					tween(win.ActiveTab.Button, "BackgroundColor3", c.darker)
+					tween(win.ActiveTab.Label, "TextColor3", c.dim)
+					tween(win.ActiveTab.Icon, "ImageColor3", c.dim)
 					win.ActiveTab.Content.Visible = false
 				end
 				win.ActiveTab = tab
-				tweenBg(btn, c.acc, 0)
+				tween(btn, "BackgroundColor3", c.inp)
+				tween(tabLbl, "TextColor3", c.acc)
+				tween(ic, "ImageColor3", c.acc)
 				tab.Content.Visible = true
 			end)
 		end
 
 		if #win.Tabs > 0 then
 			win.ActiveTab = win.Tabs[1]
-			win.Tabs[1].Button.BackgroundColor3 = c.acc
+			win.Tabs[1].Button.BackgroundColor3 = c.inp
+			win.Tabs[1].Label.TextColor3 = c.acc
+			win.Tabs[1].Icon.ImageColor3 = c.acc
 			win.Tabs[1].Content.Visible = true
 		end
 
-		-- Sidebar collapse
 		local function toggleSidebar(expand)
 			win.SidebarExpanded = expand
-			local w = if expand then 180 else 48
-			sb:TweenSize(UDim2.new(0, w, 1, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.2, true)
-			toggle:TweenPosition(UDim2.new(0, if expand then 8 else (w - 32) / 2, 0.5, -16),
-				Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.2, true)
-			sd:TweenPosition(UDim2.new(0, w, 0, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.2, true)
-			mc:TweenSizeAndPosition(UDim2.new(1, -(w + 1), 1, 0), UDim2.new(0, w + 1, 0, 0),
-				Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.2, true)
+			local w = if expand then 170 else 44
+			sb:TweenSize(UDim2.new(0, w, 1, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.15, true)
+			sd:TweenPosition(UDim2.new(0, w, 0, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.15, true)
+			mc:TweenSizeAndPosition(UDim2.new(1, -(w + 1), 1, 0), UDim2.new(0, w + 1, 0, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.15, true)
 			local lt = if expand then 0 else 1
 			for _, t in ipairs(win.Tabs) do
-				Tween:Create(t.Label, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-					{TextTransparency = lt}):Play()
+				Tween:Create(t.Label, TweenInfo.new(0.1, Enum.EasingStyle.Quad), {TextTransparency = lt}):Play()
 			end
 		end
 
-		toggle.MouseButton1Click:Connect(function()
-			toggleSidebar(not win.SidebarExpanded)
-		end)
+		toggle.MouseButton1Click:Connect(function() toggleSidebar(not win.SidebarExpanded) end)
 
-		-- Dragging
+		-- Smooth Drag Setup[cite: 1]
 		local dragging, dragStart, startPos
 		tb.InputBegan:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -1248,35 +1224,25 @@ function Lib:CreateWindow(opts)
 		table.insert(Lib.Conns, UIS.InputChanged:Connect(function(input)
 			if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
 				local d = input.Position - dragStart
-				mf.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X,
-					startPos.Y.Scale, startPos.Y.Offset + d.Y)
+				mf.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
 			end
 		end))
 
-		x.MouseButton1Click:Connect(function()
-			win:Destroy(); Lib.Toggled = false
-		end)
-		x.MouseEnter:Connect(function()
-			x.BackgroundColor3 = c.err
-			x.TextColor3 = Color3.fromRGB(255, 255, 255)
-		end)
-		x.MouseLeave:Connect(function()
-			x.BackgroundTransparency = 1
-			x.TextColor3 = c.dim
-		end)
+		x.MouseButton1Click:Connect(function() win:Destroy(); Lib.Toggled = false end)
+		x.MouseEnter:Connect(function() tween(x, "TextColor3", c.err) end)
+		x.MouseLeave:Connect(function() tween(x, "TextColor3", c.dim) end)
 
-		-- toggle keybind
 		table.insert(Lib.Conns, UIS.InputBegan:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == win.ToggleKey then
 				gui.Enabled = not gui.Enabled; Lib.Toggled = gui.Enabled
 			end
 		end))
 
-		-- Mobile: floating toggle button
+		-- Mobile Support Engine[cite: 1]
 		if UIS.TouchEnabled then
 			local mb = Instance.new("ImageButton")
-			mb.Size = UDim2.new(0, 36, 0, 36)
-			mb.Position = UDim2.new(0, 8, 0.5, -18)
+			mb.Size = UDim2.new(0, 38, 0, 38)
+			mb.Position = UDim2.new(0, 12, 0.5, -19)
 			mb.BackgroundColor3 = c.acc
 			mb.BorderSizePixel = 0
 			mb.Image = uic and uic.Url or ""
@@ -1285,13 +1251,12 @@ function Lib:CreateWindow(opts)
 				mb.ImageRectOffset = uic.ImageRectOffset
 			end
 			mb.ImageColor3 = Color3.new(1, 1, 1)
-			mb.BackgroundTransparency = 0.3
+			mb.BackgroundTransparency = 0.2
 			mb.AutoButtonColor = false
 			mb.ZIndex = 100
 			mb.Parent = gui
-			local mbC = Instance.new("UICorner")
-			mbC.CornerRadius = UDim.new(0, 8)
-			mbC.Parent = mb
+			addCorner(mb, 8)
+			addStroke(mb, c.brd, 1.5)
 			win._mobileBtn = mb
 
 			mb.MouseButton1Click:Connect(function()
@@ -1303,10 +1268,7 @@ function Lib:CreateWindow(opts)
 		end
 
 		if Lib._cfg.auto then
-			task.spawn(function()
-				task.wait()
-				Lib:LoadConfig()
-			end)
+			task.spawn(function() task.wait() Lib:LoadConfig() end)
 		end
 	end
 
