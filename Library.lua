@@ -759,18 +759,18 @@ local function makeCategory(tab, name)
 	hdr.Parent = cat
 
 	local arrow = Instance.new("TextLabel")
-	arrow.Size = UDim2.new(0, 20, 0, 34)
+	arrow.Size = UDim2.new(0, 16, 0, 34)
 	arrow.Position = UDim2.new(0, 8, 0, 0)
 	arrow.BackgroundTransparency = 1
-	arrow.Text = "▼"
+	arrow.Text = ">"
 	arrow.TextColor3 = c.dim
 	arrow.Font = Enum.Font.Gotham
-	arrow.TextSize = 11
+	arrow.TextSize = 13
 	arrow.Parent = hdr
 
 	local tl = Instance.new("TextLabel")
-	tl.Size = UDim2.new(1, -36, 1, 0)
-	tl.Position = UDim2.new(0, 30, 0, 0)
+	tl.Size = UDim2.new(1, -34, 1, 0)
+	tl.Position = UDim2.new(0, 26, 0, 0)
 	tl.BackgroundTransparency = 1
 	tl.Text = name
 	tl.TextColor3 = c.txt
@@ -786,12 +786,12 @@ local function makeCategory(tab, name)
 	cont.Parent = cat
 
 	local lst = Instance.new("UIListLayout")
-	lst.Padding = UDim.new(0, 4)
+	lst.Padding = UDim.new(0, 5)
 	lst.SortOrder = Enum.SortOrder.LayoutOrder
 	lst.Parent = cont
 	local pad = Instance.new("UIPadding")
-	pad.PaddingLeft = UDim.new(0, 8)
-	pad.PaddingRight = UDim.new(0, 8)
+	pad.PaddingLeft = UDim.new(0, 10)
+	pad.PaddingRight = UDim.new(0, 10)
 	pad.PaddingBottom = UDim.new(0, 8)
 	pad.Parent = cont
 
@@ -800,21 +800,24 @@ local function makeCategory(tab, name)
 		Tab = tab, Expanded = true, Name = name,
 	}
 
+	local contentHeight = 0
+
 	lst:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-		local ch = lst.AbsoluteContentSize.Y
-		cont.Size = UDim2.new(1, 0, 0, ch)
+		contentHeight = lst.AbsoluteContentSize.Y
 		if con.Expanded then
-			cat.Size = UDim2.new(1, 0, 0, 34 + ch + 8)
+			cont.Size = UDim2.new(1, 0, 0, contentHeight)
+			cat.Size = UDim2.new(1, 0, 0, 34 + contentHeight + 8)
 		end
 	end)
 
 	hdr.MouseButton1Click:Connect(function()
 		con.Expanded = not con.Expanded
-		local h = if con.Expanded then cont.Size.Y.Offset else 0
-		Tween:Create(cont, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		local h = if con.Expanded then contentHeight else 0
+		local eas = if con.Expanded then Enum.EasingStyle.Elastic else Enum.EasingStyle.Quad
+		Tween:Create(cont, TweenInfo.new(0.3, eas, Enum.EasingDirection.Out),
 			{Size = UDim2.new(1, 0, 0, h)}):Play()
-		Tween:Create(arrow, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-			{Rotation = if con.Expanded then 0 else -90}):Play()
+		Tween:Create(arrow, TweenInfo.new(0.3, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out),
+			{Rotation = if con.Expanded then 90 else 0}):Play()
 		cat.Size = UDim2.new(1, 0, 0, 34 + h + 8)
 	end)
 
@@ -1077,9 +1080,14 @@ function Lib:CreateWindow(opts)
 
 			local pp = Instance.new("UIPadding")
 			pp.PaddingTop = UDim.new(0, 8)
-			pp.PaddingLeft = UDim.new(0, 8)
-			pp.PaddingRight = UDim.new(0, 8)
+			pp.PaddingLeft = UDim.new(0, 10)
+			pp.PaddingRight = UDim.new(0, 10)
+			pp.PaddingBottom = UDim.new(0, 8)
 			pp.Parent = page
+			local pl = Instance.new("UIListLayout")
+			pl.Padding = UDim.new(0, 6)
+			pl.SortOrder = Enum.SortOrder.LayoutOrder
+			pl.Parent = page
 
 			tab.Content = page
 
