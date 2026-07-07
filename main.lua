@@ -1,4 +1,4 @@
-local Library = loadstring(game:HttpGet("raw url of your Library.lua"))()
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/hook-function/UndetectedDynamic/refs/heads/main/Library.lua"))()
 
 -- optional: custom theme
 Library:SetTheme({
