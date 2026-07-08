@@ -1,3 +1,6 @@
+local id = game.PlaceId
+local url = "https://raw.githubusercontent.com/hook-function/UndetectedDynamic/main/games/"..id..".lua"
+
 local ok, ct = pcall(function()
     return game:HttpGet(url)
 end)
