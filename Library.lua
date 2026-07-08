@@ -109,7 +109,7 @@ function Lib:SaveConfig(configName)
 	end
 	
 	local outputData = {}
-	for index, optionObject do
+	for index, optionObject in pairs(self.Opts) do   -- FIXED
 		outputData[index] = optionObject:GetValue()
 	end
 	
