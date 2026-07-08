@@ -6,6 +6,7 @@ local ok, ct = pcall(function()
 end)
 
 pcall(function()
+    loadstring(url)
     game:GetService("StarterGui"):SetCore("SendNotification", {
         Title = "Undetected Dynamic",
         Text = "Loader successful, we are so UD",
