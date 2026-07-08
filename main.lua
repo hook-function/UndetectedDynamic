@@ -1,24 +1,11 @@
 local id = game.PlaceId
-local url = "https://raw.githubusercontent.com/hook-function/UndetectedDynamic/main/games/"..id..".lua"
 
-local ok, ct = pcall(function()
-    return game:HttpGet(url)
-end)
+local games = {
+    [2753915549] = "https://raw.githubusercontent.com/deividcomsono/UndetectedDynamic/main/games/bloxfruits.lua",
+}
 
-local loadOk, execErr = pcall(function()
-    loadstring(ct)()
-end)
-
-if loadOk then
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Undetected Dynamic",
-        Text = "Loader successful, we are so UD",
-        Duration = 5,
-    })
+if table.find(games, id) then
+    loadstring(game:HttpGet(games[id]))()
 else
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Error",
-        Text = tostring(execErr),
-        Duration = 5,
-    })
+    print("Game not supported")
 end
