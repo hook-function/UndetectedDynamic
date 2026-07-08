@@ -1,3 +1,7 @@
+if not table.find(["Volt", "Potassium", "Sirhurt", "Madium", "Real", "Voidclient", "Wave"], identifyexecutor()) then
+	return game.Players.LocalPlayer:Kick("Your Executor isn't Whitelisted, please contact the developer to get whitelisted.")
+end
+
 local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
 local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
 local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
