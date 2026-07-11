@@ -2143,7 +2143,7 @@ moveGB:AddToggle("InfiniteJump", { Text = "Infinite Jump", Callback = function(v
 moveGB:AddToggle("WalkSpeedToggle", { Text = "Walk Speed", Callback = function(v) if v then task.spawn(tpwalkLoop) end end })
 moveGB:AddSlider("WalkSpeed", { Text = "Speed", Default = 16, Min = 16, Max = 100, Rounding = 0 })
 moveGB:AddToggle("JumpPowerToggle", { Text = "Jump Power", Callback = function(v) if v then task.spawn(jumpPowerLoop) end end })
-moveGB:AddSlider("JumpPower", { Text = "Power", Default = 50, Min = 50, Max = 200 })
+moveGB:AddSlider("JumpPower", { Text = "Power", Default = 10, Min = 10, Max = 200 })
 moveGB:AddSlider("DiveBoost", { Text = "Dive Boost", Default = 1, Min = 1, Max = 5, Callback = function(v) setDiveBoost(v) end })
 moveGB:AddDivider()
 moveGB:AddToggle("UnlockChar", { Text = "Unlock Rotation", Callback = function(v) if v then task.spawn(unlockCharLoop) end end })
